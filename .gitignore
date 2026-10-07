@@ -1,0 +1,16 @@
+# CMake / Conan
+build/
+.conan/
+.conan2/
+CMakeUserPresets.json
+.vscode/
+.DS_Store
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.exe
+space_invaders
+*.swp
+*~
