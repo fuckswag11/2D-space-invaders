@@ -1,7 +1,5 @@
 #include <raylib.h>
-#include "player.h"
-#include "enemy.h"
-#include "bullet.h"
+#include "game.h"
 
 #define SCREEN_WIDTH  800
 #define SCREEN_HEIGHT 450
@@ -36,70 +34,39 @@ static int clock_tick(GameClock *clock) {
     return steps;
 }
 
-static void handle_bullet_collisions(BulletPool *bullets, EnemyGrid *enemies) {
-    for (int row = 0; row < ENEMY_ROWS; row++) {
-        for (int col = 0; col < ENEMY_COLS; col++) {
-            Enemy *e = &enemies->enemies[row][col];
-            if (!e->alive) continue;
-
-            Rectangle enemy_rect = {
-                e->position.x,
-                e->position.y,
-                (float)ENEMY_WIDTH,
-                (float)ENEMY_HEIGHT
-            };
-
-            if (bullet_pool_check_hit(bullets, enemy_rect)) {
-                e->alive = false;
-                enemies->alive_count--;
-            }
-        }
-    }
-}
-
 int main(void) {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Space Invaders");
     SetTargetFPS(0);
 
-    Player player;
-    player_init(&player, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-    EnemyGrid enemies;
-    enemy_grid_init(&enemies);
-
-    BulletPool bullets;
-    bullet_pool_init(&bullets);
+    Game game;
+    game_reset(&game, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     GameClock clock;
     clock_init(&clock);
 
     while (!WindowShouldClose()) {
-        if (IsKeyPressed(KEY_SPACE)) {
+        if (IsKeyPressed(KEY_R)) {
+            game_reset(&game, SCREEN_WIDTH, SCREEN_HEIGHT);
+        }
+
+        if (game.state == GAME_STATE_PLAYING && IsKeyPressed(KEY_SPACE)) {
             Vector2 muzzle = {
-                player.position.x + PLAYER_WIDTH / 2.0f,
-                player.position.y
+                game.player.position.x + PLAYER_WIDTH / 2.0f,
+                game.player.position.y
             };
-            bullet_pool_spawn(&bullets, muzzle);
+            bullet_pool_spawn(&game.bullets, muzzle);
         }
 
         int steps = clock_tick(&clock);
 
         for (int i = 0; i < steps; i++) {
-            player_update(&player, FIXED_DT, SCREEN_WIDTH);
-            enemy_grid_update(&enemies, FIXED_DT, SCREEN_WIDTH);
-            bullet_pool_update(&bullets, FIXED_DT);
-            handle_bullet_collisions(&bullets, &enemies);
+            game_update(&game, FIXED_DT);
         }
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        player_draw(&player);
-        enemy_grid_draw(&enemies);
-        bullet_pool_draw(&bullets);
-
-        DrawFPS(10, 10);
-        DrawText("Arrows/A,D to move | Space to shoot", 10, 30, 16, GRAY);
+        game_draw(&game);
 
         EndDrawing();
     }
