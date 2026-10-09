@@ -1,18 +1,15 @@
 #include <raylib.h>
+#include "player.h"
 
 #define SCREEN_WIDTH  800
 #define SCREEN_HEIGHT 450
 
-// Логика обновляется ровно 60 раз в секунду, независимо от FPS
 #define FIXED_DT (1.0f / 60.0f)
-
-// Защита от "спирали смерти": если один кадр занял слишком много времени,
-// не даём accumulator'у расти бесконечно
 #define MAX_FRAME_TIME 0.25f
 
 typedef struct {
-    float accumulator;   // сколько "неотыгранного" времени накопилось
-    double lastTime;     // время предыдущего кадра (в секундах)
+    float  accumulator;
+    double lastTime;
 } GameClock;
 
 static void clock_init(GameClock *clock) {
@@ -20,7 +17,6 @@ static void clock_init(GameClock *clock) {
     clock->lastTime = GetTime();
 }
 
-// Возвращает количество шагов физики, которое нужно выполнить в этом кадре
 static int clock_tick(GameClock *clock) {
     double now = GetTime();
     float frameTime = (float)(now - clock->lastTime);
@@ -40,27 +36,12 @@ static int clock_tick(GameClock *clock) {
     return steps;
 }
 
-// Заглушка: здесь будет обновляться вся игровая логика
-static void game_update(float dt) {
-    (void)dt; // пока не используем — но сигнатура готова к будущему
-}
-
-static void game_draw(void) {
-    BeginDrawing();
-    ClearBackground(RAYWHITE);
-
-    DrawText("Space Invaders — fixed timestep", 160, 180, 20, DARKGRAY);
-    DrawText("Logic: 60 Hz | Render: as fast as possible", 160, 210, 16, GRAY);
-
-    DrawFPS(10, 10);
-
-    EndDrawing();
-}
-
 int main(void) {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Space Invaders");
-    SetTargetFPS(0);  // 0 = без ограничения, рендер на частоте монитора
-                      // (позже можно вернуть 60, если будет мерцание)
+    SetTargetFPS(0);
+
+    Player player;
+    player_init(&player, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     GameClock clock;
     clock_init(&clock);
@@ -68,13 +49,19 @@ int main(void) {
     while (!WindowShouldClose()) {
         int steps = clock_tick(&clock);
 
-        // Обновляем логику фиксированное число раз
         for (int i = 0; i < steps; i++) {
-            game_update(FIXED_DT);
+            player_update(&player, FIXED_DT, SCREEN_WIDTH);
         }
 
-        // Рисуем один раз за кадр
-        game_draw();
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+
+        player_draw(&player);
+
+        DrawFPS(10, 10);
+        DrawText("Arrows or A/D to move", 10, 30, 16, GRAY);
+
+        EndDrawing();
     }
 
     CloseWindow();
