@@ -1,5 +1,6 @@
 #include <raylib.h>
 #include "player.h"
+#include "enemy.h"
 
 #define SCREEN_WIDTH  800
 #define SCREEN_HEIGHT 450
@@ -43,6 +44,9 @@ int main(void) {
     Player player;
     player_init(&player, SCREEN_WIDTH, SCREEN_HEIGHT);
 
+    EnemyGrid enemies;
+    enemy_grid_init(&enemies);
+
     GameClock clock;
     clock_init(&clock);
 
@@ -51,12 +55,14 @@ int main(void) {
 
         for (int i = 0; i < steps; i++) {
             player_update(&player, FIXED_DT, SCREEN_WIDTH);
+            enemy_grid_update(&enemies, FIXED_DT, SCREEN_WIDTH);
         }
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
         player_draw(&player);
+        enemy_grid_draw(&enemies);
 
         DrawFPS(10, 10);
         DrawText("Arrows or A/D to move", 10, 30, 16, GRAY);
