@@ -1,5 +1,6 @@
 #include <raylib.h>
 #include "game.h"
+#include "sprites.h"
 
 #define SCREEN_WIDTH  800
 #define SCREEN_HEIGHT 450
@@ -37,13 +38,15 @@ static int clock_tick(GameClock *clock) {
 int main(void) {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Space Invaders");
     SetTargetFPS(0);
-
+    GameSprites sprites;
+    sprites_load(&sprites);
     Game game;
+    game.sprites = sprites;
     game_reset(&game, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     GameClock clock;
     clock_init(&clock);
-
+    
     while (!WindowShouldClose()) {
         if (IsKeyPressed(KEY_R)) {
             game_reset(&game, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -62,15 +65,16 @@ int main(void) {
         for (int i = 0; i < steps; i++) {
             game_update(&game, FIXED_DT);
         }
-
+        
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        game_draw(&game);
+        game_draw(&game, FIXED_DT);
 
         EndDrawing();
     }
 
+    sprites_unload(&sprites);
     CloseWindow();
     return 0;
 }

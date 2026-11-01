@@ -4,6 +4,9 @@
 #include "player.h"
 #include "enemy.h"
 #include "bullet.h"
+#include "sprites.h"
+#include "boss.h"           
+#include "enemy_bullet.h"   
 
 typedef enum {
     GAME_STATE_PLAYING,
@@ -13,27 +16,32 @@ typedef enum {
 
 static inline int enemy_score_for_type(int type) {
     switch (type) {
-        case 0:  return 30;  
+        case 0:  return 30;
         case 1:  return 20;
         case 2:  return 10;
-        default: return 5;   
+        default: return 5;
     }
 }
 
 typedef struct {
-    Player      player;
-    EnemyGrid   enemies;
-    BulletPool  bullets;
-    GameState   state;
-    int         score;
-    int         screen_width;
-    int         screen_height;
+    Player          player;
+    EnemyGrid       enemies;
+    BulletPool      bullets;
+    EnemyBulletPool enemy_bullets;
+    Boss            boss;        
+    bool            is_boss_level; 
+    GameSprites     sprites;
+    GameState       state;
+    int             score;
+    int             level;
+    float           win_timer;
+    int             screen_width;
+    int             screen_height;
 } Game;
 
 void game_reset(Game *game, int screen_width, int screen_height);
-
 void game_update(Game *game, float dt);
+void game_draw(Game *game, float dt);
+void game_next_level(Game *game);
 
-void game_draw(const Game *game);
-
-#endif 
+#endif // GAME_H
