@@ -9,6 +9,7 @@
 #include "enemy_bullet.h"
 #include "bonus_ship.h"
 #include "shields.h"
+#include "game_events.h"
 
 typedef enum {
     GAME_STATE_PLAYING,
@@ -42,6 +43,7 @@ typedef struct {
     float           enemy_shoot_timer;
     int             screen_width;
     int             screen_height;
+    GameEventQueue  events;
 } Game;
 
 void game_reset(Game *game, int screen_width, int screen_height);

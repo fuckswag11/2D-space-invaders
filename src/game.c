@@ -5,6 +5,7 @@
 GameSprites sprites;
 
 void game_reset(Game *game, int screen_width, int screen_height) {
+    game_events_clear(&game->events);
     game->screen_width = screen_width;
     game->screen_height = screen_height;
     game->state = GAME_STATE_PLAYING;
@@ -49,6 +50,10 @@ static void handle_bullet_collisions(Game *game) {
                 e->alive = false;
                 game->enemies.alive_count--;
                 game->score += enemy_score_for_type(e->type);
+                game_events_push(
+                    &game->events,
+                    GAME_EVENT_ENEMY_HIT
+                );
             }
         }
     }
@@ -73,6 +78,7 @@ static void enemy_formation_shoot(Game *game) {
             };
 
             eb_pool_spawn(&game->enemy_bullets, origin);
+            game_events_push(&game->events, GAME_EVENT_ENEMY_SHOOT);
             return;
         }
     }
@@ -115,7 +121,8 @@ static void handle_shield_collisions(Game *game) {
         if (shields_hit(&game->shields, rect)) {
             b->alive = false;
             game->bullets.alive_count--;
-        }
+            game_events_push(&game->events, GAME_EVENT_SHIELD_HIT);
+        } 
     }
     for (int i = 0; i < EB_POOL_SIZE; i++) {
         EnemyBullet *b = &game->enemy_bullets.bullets[i];
@@ -199,6 +206,7 @@ void game_update(Game *game, float dt) {
         }
         handle_bullet_collisions(game);
         if (enemy_grid_is_empty(&game->enemies)) {
+            game_events_push(&game->events, GAME_EVENT_WIN);
             game->state = GAME_STATE_WIN;
             return;
         }
@@ -213,8 +221,10 @@ void game_update(Game *game, float dt) {
     Rectangle player_rect = { game->player.position.x, game->player.position.y, PLAYER_WIDTH, PLAYER_HEIGHT };
     if (eb_pool_check_hit_player(&game->enemy_bullets, player_rect)) {
         player_take_damage(&game->player);
+        game_events_push(&game->events, GAME_EVENT_PLAYER_HIT);
         if (!game->player.alive) {
             game->state = GAME_STATE_LOSE;
+            game_events_push(&game->events, GAME_EVENT_LOSE);
             return;
         }
     }
@@ -222,6 +232,7 @@ void game_update(Game *game, float dt) {
     if (!game->is_boss_level) {
         int player_top = (int)game->player.position.y;
         if (enemy_grid_reached_bottom(&game->enemies, player_top)) {
+            game_events_push(&game->events, GAME_EVENT_WIN);
             game->state = GAME_STATE_LOSE;
             return;
         }

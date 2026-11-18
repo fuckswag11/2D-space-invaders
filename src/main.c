@@ -1,6 +1,7 @@
 #include <raylib.h>
 #include "game.h"
 #include "sprites.h"
+#include "audio_system.h"
 
 #define SCREEN_WIDTH  800
 #define SCREEN_HEIGHT 450
@@ -37,6 +38,9 @@ static int clock_tick(GameClock *clock) {
 
 int main(void) {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Space Invaders");
+    InitAudioDevice();
+    AudioSystem audio;
+    audio_system_init(&audio);
     SetTargetFPS(0);
     GameSprites sprites;
     sprites_load(&sprites);
@@ -60,7 +64,16 @@ int main(void) {
                 game.player.position.x + PLAYER_WIDTH / 2.0f,
                 game.player.position.y
             };
+            int bullets_before = game.bullets.alive_count;
+
             bullet_pool_spawn(&game.bullets, muzzle);
+
+            if (game.bullets.alive_count > bullets_before) {
+                game_events_push(
+                    &game.events,
+                    GAME_EVENT_PLAYER_SHOOT
+                );
+            }
         }
 
         int steps = clock_tick(&clock);
@@ -68,7 +81,7 @@ int main(void) {
         for (int i = 0; i < steps; i++) {
             game_update(&game, FIXED_DT);
         }
-        
+        audio_system_process(&audio, &game.events);
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
@@ -78,6 +91,8 @@ int main(void) {
     }
 
     sprites_unload(&sprites);
+    audio_system_unload(&audio);
+    CloseAudioDevice();
     CloseWindow();
     return 0;
 }
