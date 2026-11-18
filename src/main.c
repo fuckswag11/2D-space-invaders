@@ -47,11 +47,15 @@ int main(void) {
     Game game;
     game.sprites = sprites;
     game_reset(&game, SCREEN_WIDTH, SCREEN_HEIGHT);
+    game.state = GAME_STATE_MENU;
 
     GameClock clock;
     clock_init(&clock);
     
     while (!WindowShouldClose()) {
+        if (game_menu_handle_input(&game)) {
+            break;
+        }
         if (IsKeyPressed(KEY_R)) {
             game_reset(&game, SCREEN_WIDTH, SCREEN_HEIGHT);
         }

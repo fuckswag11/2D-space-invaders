@@ -140,9 +140,59 @@ static void handle_shield_collisions(Game *game) {
 }
 
 
-void game_update(Game *game, float dt) {
-    if (game->state == GAME_STATE_LOSE) return;
+static Rectangle menu_start_rect(const Game *game) {
+    return (Rectangle){
+        (game->screen_width - 240) / 2.0f,
+        222.0f,
+        240.0f,
+        50.0f
+    };
+}
 
+static Rectangle menu_exit_rect(const Game *game) {
+    return (Rectangle){
+        (game->screen_width - 240) / 2.0f,
+        288.0f,
+        240.0f,
+        50.0f
+    };
+}
+
+bool game_menu_handle_input(Game *game) {
+    if (game->state != GAME_STATE_MENU) {
+        return false;
+    }
+
+    Vector2 mouse = GetMousePosition();
+    bool clicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+
+    if (IsKeyPressed(KEY_ENTER) ||
+        (clicked && CheckCollisionPointRec(
+            mouse, menu_start_rect(game)))) {
+
+        game_reset(
+            game,
+            game->screen_width,
+            game->screen_height
+        );
+
+        return false;
+    }
+
+    if (clicked && CheckCollisionPointRec(
+        mouse, menu_exit_rect(game))) {
+        return true;
+    }
+
+    return false;
+}
+
+
+void game_update(Game *game, float dt) {
+    if (game->state == GAME_STATE_MENU ||
+        game->state == GAME_STATE_LOSE) {
+        return;
+    }
     if (game->state == GAME_STATE_WIN) {
         game->win_timer += dt;
         if (game->win_timer >= 2.0f) {
@@ -244,11 +294,92 @@ static void draw_centered_text(const char *text, int y, int size, Color color, i
     DrawText(text, (screen_width - width) / 2, y, size, color);
 }
 
+
+static void draw_menu_button(
+    const char *text,
+    Rectangle rect,
+    Color color
+) {
+    bool hovered = CheckCollisionPointRec(
+        GetMousePosition(), rect
+    );
+
+    DrawRectangleRec(rect, color);
+
+    DrawRectangleLinesEx(
+        rect,
+        hovered ? 3.0f : 1.0f,
+        hovered ? WHITE : GRAY
+    );
+
+    int font_size = 24;
+    int text_width = MeasureText(text, font_size);
+
+    DrawText(
+        text,
+        (int)(rect.x + (rect.width - text_width) / 2),
+        (int)(rect.y + (rect.height - font_size) / 2),
+        font_size,
+        WHITE
+    );
+}
+
+static void draw_menu(Game *game) {
+    const char *title = "SPACE INVADERS";
+    int title_size = 48;
+
+    DrawText(
+        title,
+        (game->screen_width -
+         MeasureText(title, title_size)) / 2,
+        95,
+        title_size,
+        GREEN
+    );
+
+    const char *subtitle = "DEFEND THE GALAXY";
+
+    DrawText(
+        subtitle,
+        (game->screen_width -
+         MeasureText(subtitle, 20)) / 2,
+        165,
+        20,
+        LIGHTGRAY
+    );
+
+    draw_menu_button(
+        "START GAME",
+        menu_start_rect(game),
+        (Color){35, 110, 75, 255}
+    );
+
+    draw_menu_button(
+        "EXIT",
+        menu_exit_rect(game),
+        (Color){40, 50, 80, 255}
+    );
+
+    const char *hint = "ENTER - Start | Mouse - Select";
+
+    DrawText(
+        hint,
+        (game->screen_width - MeasureText(hint, 16)) / 2,
+        370,
+        16,
+        GRAY
+    );
+}
+
 void game_draw(Game *game, float dt) {
     ClearBackground((Color){ 10, 10, 25, 255 });
     
     sprites_update_stars(&game->sprites, dt);
     sprites_draw_stars(&game->sprites, game->screen_width, game->screen_height);
+    if (game->state == GAME_STATE_MENU) {
+        draw_menu(game);
+        return;
+    }
     shields_draw(&game->shields);
 
     if (!game->is_boss_level) {
