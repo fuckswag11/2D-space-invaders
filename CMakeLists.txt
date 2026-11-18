@@ -18,6 +18,8 @@ add_executable(${PROJECT_NAME}
     src/sprites.c
     src/boss.c
     src/enemy_bullet.c
+    src/bonus_ship.c
+    src/shields.c
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib)

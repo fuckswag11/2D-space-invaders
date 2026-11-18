@@ -10,8 +10,11 @@ void game_reset(Game *game, int screen_width, int screen_height) {
     game->state = GAME_STATE_PLAYING;
     game->score = 0;
     game->level = 1;          
-    game->win_timer = 0.0f;   
+    game->win_timer = 0.0f;
+    game->enemy_shoot_timer = 0.0f;
 
+    bonus_ship_init(&game->bonus_ship);
+ 
     player_init(&game->player, screen_width, screen_height, game->sprites.player);
     enemy_grid_init(&game->enemies, game->level, game->sprites.enemy_squid, game->sprites.enemy_crab, game->sprites.enemy_octopus);
     bullet_pool_init(&game->bullets, game->sprites.bullet);
@@ -26,6 +29,7 @@ void game_reset(Game *game, int screen_width, int screen_height) {
     }
     
     bullet_pool_init(&game->bullets, game->sprites.bullet);
+    shields_init(&game->shields, screen_width, screen_height);
 }
 
 static void handle_bullet_collisions(Game *game) {
@@ -50,6 +54,85 @@ static void handle_bullet_collisions(Game *game) {
     }
 }
 
+static void enemy_formation_shoot(Game *game) {
+    int first_col = GetRandomValue(0, ENEMY_COLS - 1);
+
+    for (int offset = 0; offset < ENEMY_COLS; offset++) {
+        int col = (first_col + offset) % ENEMY_COLS;
+
+        for (int row = ENEMY_ROWS - 1; row >= 0; row--) {
+            const Enemy *enemy =
+                &game->enemies.enemies[row][col];
+
+            if (!enemy->alive) continue;
+
+            Vector2 origin = {
+                enemy->position.x +
+                    (ENEMY_WIDTH - EB_WIDTH) / 2.0f,
+                enemy->position.y + ENEMY_HEIGHT
+            };
+
+            eb_pool_spawn(&game->enemy_bullets, origin);
+            return;
+        }
+    }
+}
+
+static float enemy_shot_interval(int level) {
+    float interval = 1.2f - (level - 1) * 0.08f;
+
+    if (interval < 0.45f) {
+        interval = 0.45f;
+    }
+
+    return interval;
+}
+
+static float boss_shot_interval(int level) {
+    int boss_number = level / 5;
+
+    float interval =
+        1.5f - (boss_number - 1) * 0.15f;
+
+    if (interval < 0.75f) {
+        interval = 0.75f;
+    }
+
+    return interval;
+}
+
+
+static void handle_shield_collisions(Game *game) {
+    for (int i = 0; i < BULLET_POOL_SIZE; i++) {
+        Bullet *b = &game->bullets.bullets[i];
+        if (!b->alive) continue;
+        Rectangle rect = {
+            b->position.x,
+            b->position.y,
+            (float)BULLET_WIDTH,
+            (float)BULLET_HEIGHT
+        };
+        if (shields_hit(&game->shields, rect)) {
+            b->alive = false;
+            game->bullets.alive_count--;
+        }
+    }
+    for (int i = 0; i < EB_POOL_SIZE; i++) {
+        EnemyBullet *b = &game->enemy_bullets.bullets[i];
+        if (!b->alive) continue;
+        Rectangle rect = {
+            b->position.x,
+            b->position.y,
+            (float)EB_WIDTH,
+            (float)EB_HEIGHT
+        };
+        if (shields_hit(&game->shields, rect)) {
+            b->alive = false;
+        }
+    }
+}
+
+
 void game_update(Game *game, float dt) {
     if (game->state == GAME_STATE_LOSE) return;
 
@@ -61,16 +144,24 @@ void game_update(Game *game, float dt) {
         return;
     }
 
+    enemy_grid_update(&game->enemies, dt, game->screen_width);
+
     player_update(&game->player, dt, game->screen_width);
     bullet_pool_update(&game->bullets, dt);
     eb_pool_update(&game->enemy_bullets, dt, game->screen_height);
+    handle_shield_collisions(game);
 
     if (game->is_boss_level) {
         boss_update(&game->boss, dt, game->screen_width, game->screen_height);
         
-        if (game->boss.shoot_timer >= 1.5f && game->boss.alive) {
-            eb_pool_spawn(&game->enemy_bullets, game->boss.position);
-            game->boss.shoot_timer = 0.0f;
+        float boss_interval = boss_shot_interval(game->level);
+
+        if (game->boss.alive && game->boss.shoot_timer >= boss_interval) {
+            eb_pool_spawn(
+                &game->enemy_bullets,
+                game->boss.position
+            );
+            game->boss.shoot_timer -= boss_interval;
         }
 
         Rectangle boss_rect = { game->boss.position.x, game->boss.position.y, BOSS_WIDTH, BOSS_HEIGHT };
@@ -83,12 +174,39 @@ void game_update(Game *game, float dt) {
             }
         }
     } else {
-        enemy_grid_update(&game->enemies, dt, game->screen_width);
+        enemy_grid_update(
+            &game->enemies,
+            dt,
+            game->screen_width
+        );
+        bonus_ship_update(
+            &game->bonus_ship,
+            dt,
+            game->screen_width
+        );
+        if (game->bonus_ship.active) {
+            Rectangle bonus_rect = {
+                game->bonus_ship.position.x,
+                game->bonus_ship.position.y,
+                BONUS_SHIP_WIDTH,
+                BONUS_SHIP_HEIGHT
+            };
+            if (bullet_pool_check_hit(&game->bullets, bonus_rect)) {
+                game->bonus_ship.active = false;
+                game->bonus_ship.spawn_timer = 0.0f;
+                game->score += BONUS_SHIP_SCORE;
+            }
+        }
         handle_bullet_collisions(game);
-        
         if (enemy_grid_is_empty(&game->enemies)) {
             game->state = GAME_STATE_WIN;
             return;
+        }
+        game->enemy_shoot_timer += dt;
+        float shot_interval = enemy_shot_interval(game->level);
+        if (game->enemy_shoot_timer >= shot_interval) {
+            game->enemy_shoot_timer -= shot_interval;
+            enemy_formation_shoot(game);
         }
     }
 
@@ -120,7 +238,11 @@ void game_draw(Game *game, float dt) {
     
     sprites_update_stars(&game->sprites, dt);
     sprites_draw_stars(&game->sprites, game->screen_width, game->screen_height);
+    shields_draw(&game->shields);
 
+    if (!game->is_boss_level) {
+        bonus_ship_draw(&game->bonus_ship);
+    }   
     player_draw(&game->player);
     enemy_grid_draw(&game->enemies);
     bullet_pool_draw(&game->bullets);
@@ -155,6 +277,9 @@ void game_next_level(Game *game) {
     game->level++;
     game->state = GAME_STATE_PLAYING;
     game->win_timer = 0.0f;
+    game->enemy_shoot_timer = 0.0f;
+
+    bonus_ship_init(&game->bonus_ship);
     
     player_init(&game->player, game->screen_width, game->screen_height, game->sprites.player);
     eb_pool_init(&game->enemy_bullets);
@@ -167,4 +292,9 @@ void game_next_level(Game *game) {
     } else {
         enemy_grid_init(&game->enemies, game->level, game->sprites.enemy_squid, game->sprites.enemy_crab, game->sprites.enemy_octopus);
     }
+    shields_init(
+        &game->shields,
+        game->screen_width,
+        game->screen_height
+    );
 }

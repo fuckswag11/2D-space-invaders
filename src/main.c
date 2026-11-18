@@ -51,6 +51,9 @@ int main(void) {
         if (IsKeyPressed(KEY_R)) {
             game_reset(&game, SCREEN_WIDTH, SCREEN_HEIGHT);
         }
+        if (IsKeyPressed(KEY_N)) {
+            game_next_level(&game);
+        }
 
         if (game.state == GAME_STATE_PLAYING && IsKeyPressed(KEY_SPACE)) {
             Vector2 muzzle = {

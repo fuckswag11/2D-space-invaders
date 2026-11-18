@@ -2,7 +2,11 @@
 
 void enemy_grid_init(EnemyGrid *grid, int level, Texture2D sprite_squid, Texture2D sprite_crab, Texture2D sprite_octopus) {
     grid->direction = 1;
+    grid->movement_state = ENEMY_MOVE_RIGHT;
     grid->speed = ENEMY_SPEED + (level - 1) * 20.0f; 
+    if (grid->speed > 240.0f) {
+        grid->speed = 240.0f;
+    }
     grid->alive_count = ENEMY_ROWS * ENEMY_COLS;
 
     for (int row = 0; row < ENEMY_ROWS; row++) {
@@ -10,6 +14,9 @@ void enemy_grid_init(EnemyGrid *grid, int level, Texture2D sprite_squid, Texture
             Enemy *e = &grid->enemies[row][col];
             e->position.x = (float)(col * (ENEMY_WIDTH  + ENEMY_GAP_X));
             float start_y = ENEMY_TOP_MARGIN + (level - 1) * 10.0f; 
+            if (start_y > 140.0f) {
+                start_y = 140.0f;
+            }
             e->position.y = start_y + (float)(row * (ENEMY_HEIGHT + ENEMY_GAP_Y));
             e->alive = true;
             e->type = row;
@@ -37,32 +44,57 @@ static void enemy_grid_bounds(const EnemyGrid *grid, float *min_x, float *max_x)
     *max_x = max;
 }
 
+
 void enemy_grid_update(EnemyGrid *grid, float dt, int screen_width) {
     if (grid->alive_count == 0) return;
-    float dx = grid->speed * grid->direction * dt;
-    for (int row = 0; row < ENEMY_ROWS; row++) {
-        for (int col = 0; col < ENEMY_COLS; col++) {
-            Enemy *e = &grid->enemies[row][col];
-            if (!e->alive) continue;
-            e->position.x += dx;
-        }
-    }
-    float min_x, max_x;
-    enemy_grid_bounds(grid, &min_x, &max_x);
-    bool hit_right = (max_x >= screen_width);
-    bool hit_left  = (min_x <= 0);
-    if ((grid->direction > 0 && hit_right) || (grid->direction < 0 && hit_left)) {
-        grid->direction = -grid->direction;
-        for (int row = 0; row < ENEMY_ROWS; row++) {
-            for (int col = 0; col < ENEMY_COLS; col++) {
-                Enemy *e = &grid->enemies[row][col];
-                if (!e->alive) continue;
-                e->position.y += ENEMY_DROP;
+    switch (grid->movement_state) {
+        case ENEMY_MOVE_RIGHT:
+        case ENEMY_MOVE_LEFT: {
+            float dx = grid->speed * grid->direction * dt;
+            for (int row = 0; row < ENEMY_ROWS; row++) {
+                for (int col = 0; col < ENEMY_COLS; col++) {
+                    Enemy *e = &grid->enemies[row][col];
+
+                    if (!e->alive) continue;
+
+                    e->position.x += dx;
+                }
             }
+            float min_x, max_x;
+            enemy_grid_bounds(grid, &min_x, &max_x);
+            bool hit_right = (max_x >= screen_width);
+            bool hit_left = (min_x <= 0);
+            if ((grid->direction > 0 && hit_right) ||
+                (grid->direction < 0 && hit_left)) {
+                grid->direction = -grid->direction;
+                grid->movement_state = ENEMY_MOVE_DROP;
+            }
+            break;
         }
-        grid->speed += 5.0f;
+        case ENEMY_MOVE_DROP: {
+            for (int row = 0; row < ENEMY_ROWS; row++) {
+                for (int col = 0; col < ENEMY_COLS; col++) {
+                    Enemy *e = &grid->enemies[row][col];
+
+                    if (!e->alive) continue;
+
+                    e->position.y += ENEMY_DROP;
+                }
+            }
+            grid->speed += 5.0f;
+            if (grid->speed > 260.0f) {
+                grid->speed = 260.0f;
+            }
+            if (grid->direction > 0) {
+                grid->movement_state = ENEMY_MOVE_RIGHT;
+            } else {
+                grid->movement_state = ENEMY_MOVE_LEFT;
+            }
+            break;
+        }
     }
 }
+
 
 void enemy_grid_draw(const EnemyGrid *grid) {
     for (int row = 0; row < ENEMY_ROWS; row++) {

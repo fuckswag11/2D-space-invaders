@@ -13,6 +13,12 @@
 #define ENEMY_SPEED   80.0f
 #define ENEMY_DROP    20.0f
 
+typedef enum {
+    ENEMY_MOVE_RIGHT,
+    ENEMY_MOVE_LEFT,
+    ENEMY_MOVE_DROP
+} EnemyMoveState;
+
 typedef struct {
     Vector2 position;
     bool    alive;
@@ -25,6 +31,7 @@ typedef struct {
     int     direction;
     float   speed;
     int     alive_count;
+    EnemyMoveState movement_state;
 } EnemyGrid;
 
 void enemy_grid_init(EnemyGrid *grid, int level, Texture2D sprite_squid, Texture2D sprite_crab, Texture2D sprite_octopus);

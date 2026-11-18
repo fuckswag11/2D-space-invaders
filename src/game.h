@@ -6,7 +6,9 @@
 #include "bullet.h"
 #include "sprites.h"
 #include "boss.h"           
-#include "enemy_bullet.h"   
+#include "enemy_bullet.h"
+#include "bonus_ship.h"
+#include "shields.h"
 
 typedef enum {
     GAME_STATE_PLAYING,
@@ -28,13 +30,16 @@ typedef struct {
     EnemyGrid       enemies;
     BulletPool      bullets;
     EnemyBulletPool enemy_bullets;
-    Boss            boss;        
+    Boss            boss;
+    Shields         shields;
+    BonusShip       bonus_ship;      
     bool            is_boss_level; 
     GameSprites     sprites;
     GameState       state;
     int             score;
     int             level;
     float           win_timer;
+    float           enemy_shoot_timer;
     int             screen_width;
     int             screen_height;
 } Game;
