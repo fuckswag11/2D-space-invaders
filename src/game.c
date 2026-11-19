@@ -486,6 +486,89 @@ static void draw_game_over(Game *game) {
     );
 }
 
+static void draw_hud(const Game *game) {
+    const int hud_height = 28;
+    const int y = game->screen_height - hud_height;
+
+    DrawRectangle(
+        0, y,
+        game->screen_width,
+        hud_height,
+        (Color){23, 37, 61, 255}
+    );
+
+    DrawLine(
+        0, y,
+        game->screen_width, y,
+        (Color){100, 135, 170, 255}
+    );
+
+    DrawText(
+        TextFormat("SCORE %d", game->score),
+        12, y + 6, 16, RAYWHITE
+    );
+
+    DrawText(
+        TextFormat("LEVEL %d", game->level),
+        190, y + 6, 16, RAYWHITE
+    );
+
+    DrawText("HP", 307, y + 6, 16, RAYWHITE);
+
+    for (int i = 0; i < game->player.max_hp; i++) {
+        Color color = (i < game->player.hp)
+            ? RED
+            : DARKGRAY;
+
+        DrawRectangle(
+            345 + i * 24,
+            y + 8,
+            18,
+            13,
+            color
+        );
+    }
+
+    if (game->is_boss_level) {
+        DrawText(
+            TextFormat(
+                "BOSS %d/%d",
+                game->boss.hp,
+                BOSS_MAX_HP
+            ),
+            500, y + 6, 15, RAYWHITE
+        );
+
+        // Полоса здоровья босса
+        int bar_width = 150;
+        int filled = (int)(
+            (float)game->boss.hp /
+            BOSS_MAX_HP * bar_width
+        );
+
+        if (filled < 0) filled = 0;
+        if (filled > bar_width) filled = bar_width;
+
+        DrawRectangle(
+            626, y + 10,
+            bar_width, 9, DARKGRAY
+        );
+
+        DrawRectangle(
+            626, y + 10,
+            filled, 9, RED
+        );
+    } else {
+        DrawText(
+            TextFormat(
+                "ENEMIES %d",
+                game->enemies.alive_count
+            ),
+            580, y + 6, 16, LIGHTGRAY
+        );
+    }
+}
+
 void game_draw(Game *game, float dt) {
     ClearBackground((Color){ 10, 10, 25, 255 });
     
@@ -510,12 +593,6 @@ void game_draw(Game *game, float dt) {
     enemy_grid_draw(&game->enemies);
     bullet_pool_draw(&game->bullets);
     eb_pool_draw(&game->enemy_bullets);
-
-    DrawFPS(10, 10);
-    DrawText(TextFormat("Score: %d", game->score), 10, 30, 20, LIGHTGRAY);
-    DrawText(TextFormat("Level: %d", game->level), 10, 55, 20, LIGHTGRAY);
-    DrawText("Arrows/A,D move | Space shoot | R restart", 10, 80, 14, GRAY);
-
     if (game->state == GAME_STATE_WIN) {
         draw_centered_text("LEVEL CLEARED!", 180, 50, GREEN, game->screen_width);
         draw_centered_text("Get ready for the next level...", 250, 20, LIME, game->screen_width);
@@ -525,11 +602,6 @@ void game_draw(Game *game, float dt) {
     } else {
         enemy_grid_draw(&game->enemies);
     }
-
-    for (int i = 0; i < game->player.max_hp; i++) {
-        Color c = (i < game->player.hp) ? RED : DARKGRAY;
-        DrawRectangle(10 + i * 20, 105, 15, 15, c);
-    }
     if (game->state == GAME_STATE_PAUSED) {
         DrawRectangle(
             0,
@@ -538,7 +610,6 @@ void game_draw(Game *game, float dt) {
             game->screen_height,
             Fade(BLACK, 0.70f)
         );
-
         draw_centered_text(
             "PAUSED",
             game->screen_height / 2 - 55,
@@ -546,7 +617,6 @@ void game_draw(Game *game, float dt) {
             WHITE,
             game->screen_width
         );
-
         draw_centered_text(
             "ESC - Continue",
             game->screen_height / 2 + 20,
@@ -554,7 +624,7 @@ void game_draw(Game *game, float dt) {
             LIGHTGRAY,
             game->screen_width
         );
-    }
+    } draw_hud(game);
 }
 
 void game_next_level(Game *game) {
