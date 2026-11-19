@@ -41,6 +41,7 @@ typedef struct {
     GameSprites     sprites;
     GameState       state;
     int             score;
+    int             high_score;
     int             level;
     float           win_timer;
     float           enemy_shoot_timer;

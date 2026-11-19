@@ -1,9 +1,26 @@
 #include "game.h"
 #include <raylib.h>
 #include "sprites.h"
-
+#include "high_score.h"
 GameSprites sprites;
+static void game_add_score(Game *game, int points) {
+    if (points <= 0) {
+        return;
+    }
 
+    game->score += points;
+
+    if (game->score > game->high_score) {
+        game->high_score = game->score;
+
+        if (!high_score_save(game->high_score)) {
+            TraceLog(
+                LOG_WARNING,
+                "Failed to save high score"
+            );
+        }
+    }
+}
 void game_reset(Game *game, int screen_width, int screen_height) {
     game_events_clear(&game->events);
     game->screen_width = screen_width;
@@ -49,7 +66,10 @@ static void handle_bullet_collisions(Game *game) {
             if (bullet_pool_check_hit(&game->bullets, enemy_rect)) {
                 e->alive = false;
                 game->enemies.alive_count--;
-                game->score += enemy_score_for_type(e->type);
+                game_add_score(
+                    game,
+                    enemy_score_for_type(e->type)
+                );
                 game_events_push(
                     &game->events,
                     GAME_EVENT_ENEMY_HIT
@@ -316,7 +336,7 @@ void game_update(Game *game, float dt) {
             if (bullet_pool_check_hit(&game->bullets, bonus_rect)) {
                 game->bonus_ship.active = false;
                 game->bonus_ship.spawn_timer = 0.0f;
-                game->score += BONUS_SHIP_SCORE;
+                game_add_score(game, BONUS_SHIP_SCORE);
             }
         }
         handle_bullet_collisions(game);
@@ -438,6 +458,18 @@ static void draw_menu(Game *game) {
         16,
         GRAY
     );
+    const char *record = TextFormat(
+        "HIGH SCORE: %d",
+        game->high_score
+    );
+
+    DrawText(
+        record,
+        (game->screen_width - MeasureText(record, 20)) / 2,
+        410,
+        20,
+        GOLD
+    );
 }
 
 static void draw_game_over(Game *game) {
@@ -464,7 +496,13 @@ static void draw_game_over(Game *game) {
         LIGHTGRAY,
         game->screen_width
     );
-
+    draw_centered_text(
+        TextFormat("HIGH SCORE: %d", game->high_score),
+        232,
+        18,
+        GOLD,
+        game->screen_width
+    );
     draw_menu_button(
         "RESTART",
         game_over_restart_rect(game),
@@ -504,30 +542,24 @@ static void draw_hud(const Game *game) {
     );
 
     DrawText(
-        TextFormat("SCORE %d", game->score),
-        12, y + 6, 16, RAYWHITE
+    TextFormat("SCORE %d", game->score),
+    12, y + 6, 14, RAYWHITE
     );
 
     DrawText(
-        TextFormat("LEVEL %d", game->level),
-        190, y + 6, 16, RAYWHITE
+        TextFormat("BEST %d", game->high_score),
+        150, y + 6, 14, GOLD
     );
 
-    DrawText("HP", 307, y + 6, 16, RAYWHITE);
+    DrawText(
+        TextFormat("LVL %d", game->level),
+        310, y + 6, 14, RAYWHITE
+    );
 
-    for (int i = 0; i < game->player.max_hp; i++) {
-        Color color = (i < game->player.hp)
-            ? RED
-            : DARKGRAY;
-
-        DrawRectangle(
-            345 + i * 24,
-            y + 8,
-            18,
-            13,
-            color
-        );
-    }
+    DrawText(
+        "HP",
+        385, y + 6, 14, RAYWHITE
+    );
 
     if (game->is_boss_level) {
         DrawText(

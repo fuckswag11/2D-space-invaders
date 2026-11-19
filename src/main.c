@@ -2,6 +2,7 @@
 #include "game.h"
 #include "sprites.h"
 #include "audio_system.h"
+#include "high_score.h"
 
 #define SCREEN_WIDTH  800
 #define SCREEN_HEIGHT 450
@@ -45,11 +46,11 @@ int main(void) {
     SetTargetFPS(0);
     GameSprites sprites;
     sprites_load(&sprites);
-    Game game;
+    Game game = {0};
     game.sprites = sprites;
     game_reset(&game, SCREEN_WIDTH, SCREEN_HEIGHT);
+    game.high_score = high_score_load();
     game.state = GAME_STATE_MENU;
-
     GameClock clock;
     clock_init(&clock);
     

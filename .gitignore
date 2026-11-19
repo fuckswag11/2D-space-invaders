@@ -14,3 +14,5 @@ CMakeUserPresets.json
 space_invaders
 *.swp
 *~
+# Local game records
+highscore.dat

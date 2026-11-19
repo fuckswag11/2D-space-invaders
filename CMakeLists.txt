@@ -21,6 +21,7 @@ add_executable(${PROJECT_NAME}
     src/bonus_ship.c
     src/shields.c
     src/audio_system.c
+    src/high_score.c
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
