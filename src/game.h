@@ -28,6 +28,7 @@ static inline int enemy_score_for_type(int type) {
     }
 }
 
+
 typedef struct {
     Player          player;
     EnemyGrid       enemies;
@@ -52,6 +53,7 @@ void game_reset(Game *game, int screen_width, int screen_height);
 void game_update(Game *game, float dt);
 void game_draw(Game *game, float dt);
 bool game_menu_handle_input(Game *game);
+void game_over_handle_input(Game *game);
 void game_next_level(Game *game);
 
 #endif // GAME_H

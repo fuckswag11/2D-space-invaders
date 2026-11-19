@@ -57,16 +57,12 @@ int main(void) {
         if (game_menu_handle_input(&game)) {
             break;
         }
-        if (game.state != GAME_STATE_MENU &&
-            game.state != GAME_STATE_PAUSED &&
-        IsKeyPressed(KEY_R)) {
-
-            game_reset(
-                &game,
-                SCREEN_WIDTH,
-                SCREEN_HEIGHT
-            );
+        if (game.state == GAME_STATE_PLAYING &&
+            IsKeyPressed(KEY_R)) {
+            game_reset(&game, SCREEN_WIDTH, SCREEN_HEIGHT);
         }
+
+        game_over_handle_input(&game);
         if (IsKeyPressed(KEY_N)) {
             game_next_level(&game);
         }

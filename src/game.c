@@ -158,6 +158,60 @@ static Rectangle menu_exit_rect(const Game *game) {
     };
 }
 
+static Rectangle game_over_restart_rect(const Game *game) {
+    return (Rectangle){
+        (game->screen_width - 240) / 2.0f,
+        255.0f,
+        240.0f,
+        50.0f
+    };
+}
+
+static Rectangle game_over_menu_rect(const Game *game) {
+    return (Rectangle){
+        (game->screen_width - 240) / 2.0f,
+        316.0f,
+        240.0f,
+        50.0f
+    };
+}
+
+
+void game_over_handle_input(Game *game) {
+    if (game->state != GAME_STATE_LOSE) {
+        return;
+    }
+
+    Vector2 mouse = GetMousePosition();
+    bool clicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+
+    bool restart_clicked =
+        clicked && CheckCollisionPointRec(
+            mouse,
+            game_over_restart_rect(game)
+        );
+
+    bool menu_clicked =
+        clicked && CheckCollisionPointRec(
+            mouse,
+            game_over_menu_rect(game)
+        );
+
+    if (IsKeyPressed(KEY_R) || restart_clicked) {
+        game_reset(
+            game,
+            game->screen_width,
+            game->screen_height
+        );
+        return;
+    }
+
+    if (IsKeyPressed(KEY_M) || menu_clicked) {
+        game->state = GAME_STATE_MENU;
+        return;
+    }
+}
+
 bool game_menu_handle_input(Game *game) {
     if (game->state != GAME_STATE_MENU) {
         return false;
@@ -166,9 +220,22 @@ bool game_menu_handle_input(Game *game) {
     Vector2 mouse = GetMousePosition();
     bool clicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 
+    Rectangle start_button = {
+        (game->screen_width - 240) / 2.0f,
+        222.0f,
+        240.0f,
+        50.0f
+    };
+
+    Rectangle exit_button = {
+        (game->screen_width - 240) / 2.0f,
+        288.0f,
+        240.0f,
+        50.0f
+    };
+
     if (IsKeyPressed(KEY_ENTER) ||
-        (clicked && CheckCollisionPointRec(
-            mouse, menu_start_rect(game)))) {
+        (clicked && CheckCollisionPointRec(mouse, start_button))) {
 
         game_reset(
             game,
@@ -179,14 +246,12 @@ bool game_menu_handle_input(Game *game) {
         return false;
     }
 
-    if (clicked && CheckCollisionPointRec(
-        mouse, menu_exit_rect(game))) {
+    if (clicked && CheckCollisionPointRec(mouse, exit_button)) {
         return true;
     }
 
     return false;
 }
-
 
 void game_update(Game *game, float dt) {
     if (game->state == GAME_STATE_MENU ||
@@ -282,7 +347,11 @@ void game_update(Game *game, float dt) {
     if (!game->is_boss_level) {
         int player_top = (int)game->player.position.y;
         if (enemy_grid_reached_bottom(&game->enemies, player_top)) {
-            game_events_push(&game->events, GAME_EVENT_WIN);
+            game_events_push(
+                &game->events,
+                GAME_EVENT_LOSE
+            );
+
             game->state = GAME_STATE_LOSE;
             return;
         }
@@ -371,6 +440,52 @@ static void draw_menu(Game *game) {
     );
 }
 
+static void draw_game_over(Game *game) {
+    draw_centered_text(
+        "GAME OVER",
+        90,
+        52,
+        RED,
+        game->screen_width
+    );
+
+    draw_centered_text(
+        TextFormat("FINAL SCORE: %d", game->score),
+        165,
+        28,
+        YELLOW,
+        game->screen_width
+    );
+
+    draw_centered_text(
+        TextFormat("LEVEL REACHED: %d", game->level),
+        205,
+        22,
+        LIGHTGRAY,
+        game->screen_width
+    );
+
+    draw_menu_button(
+        "RESTART",
+        game_over_restart_rect(game),
+        (Color){35, 110, 75, 255}
+    );
+
+    draw_menu_button(
+        "MAIN MENU",
+        game_over_menu_rect(game),
+        (Color){40, 50, 80, 255}
+    );
+
+    draw_centered_text(
+        "R - Restart  |  M - Main Menu",
+        397,
+        16,
+        GRAY,
+        game->screen_width
+    );
+}
+
 void game_draw(Game *game, float dt) {
     ClearBackground((Color){ 10, 10, 25, 255 });
     
@@ -380,6 +495,10 @@ void game_draw(Game *game, float dt) {
     sprites_draw_stars(&game->sprites, game->screen_width, game->screen_height);
     if (game->state == GAME_STATE_MENU) {
         draw_menu(game);
+        return;
+    }
+    if (game->state == GAME_STATE_LOSE) {
+        draw_game_over(game);
         return;
     }
     shields_draw(&game->shields);
@@ -400,10 +519,6 @@ void game_draw(Game *game, float dt) {
     if (game->state == GAME_STATE_WIN) {
         draw_centered_text("LEVEL CLEARED!", 180, 50, GREEN, game->screen_width);
         draw_centered_text("Get ready for the next level...", 250, 20, LIME, game->screen_width);
-    } else if (game->state == GAME_STATE_LOSE) {
-        draw_centered_text("GAME OVER", 180, 50, RED, game->screen_width);
-        draw_centered_text(TextFormat("You reached level %d", game->level), 230, 20, ORANGE, game->screen_width);
-        draw_centered_text("Press R to play again", 260, 20, LIGHTGRAY, game->screen_width);
     }
     if (game->is_boss_level) {
         boss_draw(&game->boss);
