@@ -190,6 +190,7 @@ bool game_menu_handle_input(Game *game) {
 
 void game_update(Game *game, float dt) {
     if (game->state == GAME_STATE_MENU ||
+        game->state == GAME_STATE_PAUSED ||
         game->state == GAME_STATE_LOSE) {
         return;
     }
@@ -200,7 +201,6 @@ void game_update(Game *game, float dt) {
         }
         return;
     }
-
     enemy_grid_update(&game->enemies, dt, game->screen_width);
 
     player_update(&game->player, dt, game->screen_width);
@@ -374,7 +374,9 @@ static void draw_menu(Game *game) {
 void game_draw(Game *game, float dt) {
     ClearBackground((Color){ 10, 10, 25, 255 });
     
-    sprites_update_stars(&game->sprites, dt);
+    if (game->state != GAME_STATE_PAUSED) {
+        sprites_update_stars(&game->sprites, dt);
+    }
     sprites_draw_stars(&game->sprites, game->screen_width, game->screen_height);
     if (game->state == GAME_STATE_MENU) {
         draw_menu(game);
@@ -412,6 +414,31 @@ void game_draw(Game *game, float dt) {
     for (int i = 0; i < game->player.max_hp; i++) {
         Color c = (i < game->player.hp) ? RED : DARKGRAY;
         DrawRectangle(10 + i * 20, 105, 15, 15, c);
+    }
+    if (game->state == GAME_STATE_PAUSED) {
+        DrawRectangle(
+            0,
+            0,
+            game->screen_width,
+            game->screen_height,
+            Fade(BLACK, 0.70f)
+        );
+
+        draw_centered_text(
+            "PAUSED",
+            game->screen_height / 2 - 55,
+            54,
+            WHITE,
+            game->screen_width
+        );
+
+        draw_centered_text(
+            "ESC - Continue",
+            game->screen_height / 2 + 20,
+            22,
+            LIGHTGRAY,
+            game->screen_width
+        );
     }
 }
 

@@ -38,6 +38,7 @@ static int clock_tick(GameClock *clock) {
 
 int main(void) {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Space Invaders");
+    SetExitKey(KEY_NULL);
     InitAudioDevice();
     AudioSystem audio;
     audio_system_init(&audio);
@@ -56,8 +57,15 @@ int main(void) {
         if (game_menu_handle_input(&game)) {
             break;
         }
-        if (IsKeyPressed(KEY_R)) {
-            game_reset(&game, SCREEN_WIDTH, SCREEN_HEIGHT);
+        if (game.state != GAME_STATE_MENU &&
+            game.state != GAME_STATE_PAUSED &&
+        IsKeyPressed(KEY_R)) {
+
+            game_reset(
+                &game,
+                SCREEN_WIDTH,
+                SCREEN_HEIGHT
+            );
         }
         if (IsKeyPressed(KEY_N)) {
             game_next_level(&game);
@@ -79,7 +87,16 @@ int main(void) {
                 );
             }
         }
-
+        
+        if (IsKeyPressed(KEY_ESCAPE)) {
+            if (game.state == GAME_STATE_PLAYING) {
+                game.state = GAME_STATE_PAUSED;
+            }
+            else if (game.state == GAME_STATE_PAUSED) {
+                game.state = GAME_STATE_PLAYING;
+            }
+        }
+        
         int steps = clock_tick(&clock);
 
         for (int i = 0; i < steps; i++) {
